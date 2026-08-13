@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Send, CheckCircle2, AlertCircle, UserCircle, Calendar, History, Target, AlertTriangle, Loader2 } from 'lucide-react';
-import { fetchEmployees, submitDailyUpdate } from '../api';
+import { Send, CheckCircle2, AlertCircle, UserCircle, Calendar, History, Target, AlertTriangle, Loader2, Lock } from 'lucide-react';
+import { fetchEmployees, submitDailyUpdate, fetchDailyUpdates } from '../api';
 
 function getTodayString() {
   const today = new Date();
@@ -22,11 +22,21 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [existingSubmission, setExistingSubmission] = useState(null);
 
   // Load active employees added by TL on mount
   useEffect(() => {
     loadEmployees();
   }, []);
+
+  // Check if an update for (selectedEmployeeId, date) already exists
+  useEffect(() => {
+    if (selectedEmployeeId && date) {
+      checkExistingSubmission(selectedEmployeeId, date);
+    } else {
+      setExistingSubmission(null);
+    }
+  }, [selectedEmployeeId, date]);
 
   async function loadEmployees() {
     try {
@@ -42,6 +52,20 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
       }
     } catch (err) {
       console.error("Error loading employees:", err);
+    }
+  }
+
+  async function checkExistingSubmission(empId, selectedDate) {
+    try {
+      const res = await fetchDailyUpdates({ employee_id: empId, date: selectedDate });
+      if (res && res.length > 0) {
+        setExistingSubmission(res[0]);
+      } else {
+        setExistingSubmission(null);
+      }
+    } catch (err) {
+      console.error("Error checking existing submission:", err);
+      setExistingSubmission(null);
     }
   }
 
@@ -61,6 +85,11 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
     e.preventDefault();
     setSuccessMessage('');
     setErrorMessage('');
+
+    if (existingSubmission) {
+      setErrorMessage("You have already submitted an update for this date. Submissions are locked.");
+      return;
+    }
 
     if (!selectedEmployeeId) {
       setErrorMessage("Please select your employee name from the dropdown.");
@@ -94,6 +123,7 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
       setYesterdayWork('');
       setTodayPlan('');
       setBlockers('');
+      setExistingSubmission(createdUpdate);
 
       if (onUpdateSubmitted) {
         onUpdateSubmitted(createdUpdate.employee_id);
@@ -104,6 +134,8 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
       setSubmitting(false);
     }
   }
+
+  const isFormLocked = !!existingSubmission;
 
   return (
     <div className="glass-card">
@@ -121,6 +153,15 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
         <div className="alert-banner alert-success">
           <CheckCircle2 size={18} />
           <span>{successMessage}</span>
+        </div>
+      )}
+
+      {existingSubmission && (
+        <div className="alert-banner" style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#065f46', display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <Lock size={18} />
+          <div>
+            <strong>Already Submitted:</strong> You have already submitted your update for <strong>{date}</strong>. Status: <strong>{existingSubmission.tl_status}</strong>. Submissions are locked and cannot be modified.
+          </div>
         </div>
       )}
 
@@ -180,9 +221,10 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
           </label>
           <textarea
             className="form-textarea"
-            placeholder="What tasks or progress did you complete yesterday?"
-            value={yesterdayWork}
+            placeholder={isFormLocked ? "Update already submitted for this date." : "What tasks or progress did you complete yesterday?"}
+            value={isFormLocked ? existingSubmission.yesterday_work : yesterdayWork}
             onChange={(e) => setYesterdayWork(e.target.value)}
+            disabled={isFormLocked}
             required
           />
         </div>
@@ -194,9 +236,10 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
           </label>
           <textarea
             className="form-textarea"
-            placeholder="What are your key goals and targets for today?"
-            value={todayPlan}
+            placeholder={isFormLocked ? "Update already submitted for this date." : "What are your key goals and targets for today?"}
+            value={isFormLocked ? existingSubmission.today_plan : todayPlan}
             onChange={(e) => setTodayPlan(e.target.value)}
+            disabled={isFormLocked}
             required
           />
         </div>
@@ -208,18 +251,24 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
           </label>
           <textarea
             className="form-textarea"
-            placeholder="Any impediments, technical blockers, or dependency delays? (Optional)"
-            value={blockers}
+            placeholder={isFormLocked ? "Update already submitted for this date." : "Any impediments, technical blockers, or dependency delays? (Optional)"}
+            value={isFormLocked ? (existingSubmission.blockers || 'None') : blockers}
             onChange={(e) => setBlockers(e.target.value)}
+            disabled={isFormLocked}
           />
         </div>
 
         {/* Submit Button */}
-        <button type="submit" className="btn-submit" disabled={submitting || employees.length === 0}>
+        <button type="submit" className="btn-submit" disabled={submitting || employees.length === 0 || isFormLocked}>
           {submitting ? (
             <>
               <Loader2 className="spinner" size={18} />
               Submitting...
+            </>
+          ) : isFormLocked ? (
+            <>
+              <Lock size={18} />
+              Submitted & Locked
             </>
           ) : (
             <>

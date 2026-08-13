@@ -56,6 +56,13 @@ def get_or_create_employee(db: Session, name: str) -> models.Employee:
     return create_employee(db, schemas.EmployeeCreate(name=name))
 
 
+def get_update_by_employee_and_date(db: Session, employee_id: int, date: str) -> Optional[models.DailyUpdate]:
+    return db.query(models.DailyUpdate).filter(
+        models.DailyUpdate.employee_id == employee_id,
+        models.DailyUpdate.date == date
+    ).first()
+
+
 def create_daily_update(db: Session, update_data: schemas.DailyUpdateCreate) -> models.DailyUpdate:
     employee_id = update_data.employee_id
     if not employee_id:
@@ -64,6 +71,10 @@ def create_daily_update(db: Session, update_data: schemas.DailyUpdateCreate) -> 
             employee_id = emp.id
         else:
             raise ValueError("Either employee_id or employee_name must be provided.")
+
+    existing = get_update_by_employee_and_date(db, employee_id, update_data.date)
+    if existing:
+        raise ValueError(f"Daily update for this employee for date '{update_data.date}' has already been submitted.")
 
     db_update = models.DailyUpdate(
         employee_id=employee_id,
