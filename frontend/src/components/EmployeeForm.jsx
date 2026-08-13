@@ -90,7 +90,7 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
 
       const createdUpdate = await submitDailyUpdate(payload);
 
-      setSuccessMessage("Daily update submitted successfully!");
+      setSuccessMessage("Daily update submitted successfully! Your submission has been securely sent to your Team Lead.");
       setYesterdayWork('');
       setTodayPlan('');
       setBlockers('');
@@ -107,9 +107,14 @@ export default function EmployeeForm({ onUpdateSubmitted, onEmployeeSelect }) {
 
   return (
     <div className="glass-card">
-      <div className="card-header">
-        <UserCircle className="card-header-icon" size={24} />
-        <h2 className="card-title">Submit Daily Update</h2>
+      <div className="card-header" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <UserCircle className="card-header-icon" size={24} />
+          <h2 className="card-title">Submit Daily Update</h2>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+          Submissions are sent directly to your Team Lead. Submissions cannot be viewed or modified by other employees.
+        </p>
       </div>
 
       {successMessage && (
