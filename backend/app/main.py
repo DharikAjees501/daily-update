@@ -39,7 +39,7 @@ app = FastAPI(
     version="3.0.0"
 )
 
-# Enable CORS for local React development
+# Enable CORS for local React development and production
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -58,14 +58,16 @@ def read_root():
     }
 
 
-# Stats Endpoint
+# Stats Endpoints (supports both /api/stats and /stats)
 @app.get("/api/stats", response_model=schemas.DashboardStatsResponse)
+@app.get("/stats", response_model=schemas.DashboardStatsResponse)
 def get_stats(db: Session = Depends(get_db)):
     return crud.get_dashboard_stats(db=db)
 
 
-# TL Authentication Endpoint
+# TL Authentication Endpoints (supports both /api/tl/login and /tl/login)
 @app.post("/api/tl/login", response_model=schemas.TLLoginResponse)
+@app.post("/tl/login", response_model=schemas.TLLoginResponse)
 def tl_login(login: schemas.TLLoginRequest):
     if login.username.strip() == "admin" and login.password == "prasanthaiteam":
         return schemas.TLLoginResponse(
@@ -82,10 +84,10 @@ def tl_login(login: schemas.TLLoginRequest):
 
 # Employee Endpoints
 @app.post("/api/employees", response_model=schemas.EmployeeResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/employees", response_model=schemas.EmployeeResponse, status_code=status.HTTP_201_CREATED)
 def create_employee(employee: schemas.EmployeeCreate, db: Session = Depends(get_db)):
     db_emp = crud.get_employee_by_name(db, name=employee.name)
     if db_emp:
-        # If employee already exists but is inactive, reactivate
         if not db_emp.is_active:
             return crud.update_employee(db=db, employee_id=db_emp.id, employee_update=schemas.EmployeeUpdate(is_active=True))
         raise HTTPException(
@@ -96,6 +98,7 @@ def create_employee(employee: schemas.EmployeeCreate, db: Session = Depends(get_
 
 
 @app.get("/api/employees", response_model=List[schemas.EmployeeResponse])
+@app.get("/employees", response_model=List[schemas.EmployeeResponse])
 def list_employees(
     active_only: bool = Query(False, description="Filter only active employees"),
     db: Session = Depends(get_db)
@@ -104,6 +107,7 @@ def list_employees(
 
 
 @app.patch("/api/employees/{employee_id}", response_model=schemas.EmployeeResponse)
+@app.patch("/employees/{employee_id}", response_model=schemas.EmployeeResponse)
 def update_employee(
     employee_id: int,
     employee_update: schemas.EmployeeUpdate,
@@ -120,6 +124,7 @@ def update_employee(
 
 # Daily Update Endpoints
 @app.post("/api/updates", response_model=schemas.DailyUpdateResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/updates", response_model=schemas.DailyUpdateResponse, status_code=status.HTTP_201_CREATED)
 def submit_daily_update(update: schemas.DailyUpdateCreate, db: Session = Depends(get_db)):
     if not update.employee_id and not update.employee_name:
         raise HTTPException(
@@ -150,6 +155,7 @@ def submit_daily_update(update: schemas.DailyUpdateCreate, db: Session = Depends
 
 
 @app.get("/api/updates", response_model=List[schemas.DailyUpdateResponse])
+@app.get("/updates", response_model=List[schemas.DailyUpdateResponse])
 def get_daily_updates(
     employee_id: Optional[int] = Query(None, description="Filter updates by employee ID"),
     date: Optional[str] = Query(None, description="Filter updates by specific date (YYYY-MM-DD)"),
@@ -173,6 +179,7 @@ def get_daily_updates(
 
 
 @app.patch("/api/updates/{update_id}/review", response_model=schemas.DailyUpdateResponse)
+@app.patch("/updates/{update_id}/review", response_model=schemas.DailyUpdateResponse)
 def review_daily_update(
     update_id: int,
     review: schemas.DailyUpdateReview,

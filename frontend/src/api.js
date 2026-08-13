@@ -1,6 +1,8 @@
 // API service module for interacting with FastAPI backend (Local & Production ready)
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
+let rawBase = import.meta.env.VITE_API_BASE_URL || '/api';
+rawBase = rawBase.replace(/\/+$/, '');
+const API_BASE = rawBase;
 
 export async function fetchDashboardStats() {
   const response = await fetch(`${API_BASE}/stats`);
