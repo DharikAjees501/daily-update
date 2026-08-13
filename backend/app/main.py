@@ -69,7 +69,7 @@ def get_stats(db: Session = Depends(get_db)):
 @app.post("/api/tl/login", response_model=schemas.TLLoginResponse)
 @app.post("/tl/login", response_model=schemas.TLLoginResponse)
 def tl_login(login: schemas.TLLoginRequest):
-    if login.username.strip() == "admin" and login.password == "prasanthaiteam":
+    if login.username.strip() == "admin" and login.password == "codework":
         return schemas.TLLoginResponse(
             success=True,
             message="Login successful",
